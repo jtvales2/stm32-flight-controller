@@ -1,86 +1,91 @@
 # STM32 Flight Controller
 
-**A source-available, STM32F407-based quadrotor flight-control firmware project**, focused on asynchronous sensor acquisition, time-aware estimation, closed-loop control, and fault handling.
+**My STM32F407-based quadrotor flight-control firmware, built around real-time sensor acquisition, timestamp-aware estimation, closed-loop control, and explicit fault-handling paths.**
 
-[简体中文](README.zh-CN.md) · [Firmware](firmware/stm32/) · [Build guide](BUILD.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+`STM32F407` · `BMI088` · `MS5611` · `SPI DMA` · `Ring Buffer` · `Mahony` · `Cascaded Control` · `Failsafe`
 
-> **Project scope:** This repository contains an author-maintained flight-controller implementation and selected historical bench captures. The architecture diagrams describe code paths, not measured performance. A recorded Keil build exists, but this cleaned publication copy is **not a flight-qualified firmware release**. The project-owned license and remaining authorship boundaries must be finalized before treating the entire codebase as permissively licensed open source.
+[简体中文](README.zh-CN.md) · [Source code](firmware/stm32/) · [Build guide](BUILD.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-## System at a glance
+## Why I built it
 
-| Layer | Implementation |
+For me, building a flight controller was about more than getting a PID loop to run. I wanted to work through the entire embedded control path: **when sensor data becomes available, how it is acquired without blocking interrupts, how samples are matched in time, what happens when processing falls behind, and how the system responds to faults before driving the motors.**
+
+I organized the firmware around an STM32F407, BMI088 inertial sensors, an MS5611 barometer, SBUS input, and four motor outputs. My main focus was on making acquisition, estimation, control, and safety responsibilities clear in the source code.
+
+## System architecture
+
+![Architecture of my STM32 flight-controller firmware](media/system-architecture.svg)
+
+I connect BMI088 data-ready interrupts and asynchronous SPI DMA transfers to timestamped buffers, then process sensor pairing, attitude estimation, and control in the main loop before motor mixing. SBUS reception, barometer processing, and safety-state management are integrated alongside that path.
+
+| Area | My implementation |
 | --- | --- |
-| Microcontroller | STM32F407ZGTx (Cortex-M4F); HSI/PLL nominal SYSCLK 168 MHz |
-| Inertial sensors | BMI088 accelerometer + gyroscope, independent DRDY and SPI1 DMA |
-| Estimation | Timestamp-aligned samples and an author-written Mahony-based 6-DoF quaternion estimator |
-| Control | Roll/pitch angle outer P loops and angular-rate PD loops; separate yaw control |
-| Height-related code | Author-written MS5611 driver, barometric altitude/vertical-speed processing and altitude-hold logic |
-| Input / output | SBUS over USART6 DMA; four-channel motor PWM and mixer |
-| Fault paths | IMU/DMA timeout handling, sample freshness checks, arming guards and latched stop behavior |
+| MCU | STM32F407ZGTx, Cortex-M4F; nominal 168 MHz HSI/PLL configuration |
+| IMU | Independent BMI088 accelerometer/gyroscope DRDY events, SPI1 DMA, timestamps, and buffering |
+| Estimation | My C implementation of a Mahony-based six-axis quaternion estimator with timestamp-aware sensor inputs |
+| Control | Roll/pitch outer angle P and inner rate PD loops; separate yaw control and four-motor mixing |
+| Altitude-related modules | My MS5611 driver; barometric altitude/vertical-speed processing and altitude-hold code |
+| RC and actuation | SBUS over USART6 DMA; four PWM motor outputs |
+| Safety and diagnostics | DMA timeout recovery, sample freshness checks, arming gates, latched stop behavior, and diagnostic counters |
 
-## Architecture
+## My main design focus: time-aware sensor data
 
-![Flight controller software architecture, derived from source](media/system-architecture.svg)
+![BMI088 asynchronous acquisition and timestamp pipeline](media/imu-pipeline.svg)
 
-The firmware connects sensor interrupts and DMA completions to timestamped data buffers. A main-loop consumer then performs pairing, attitude estimation and control before motor mixing. Receiver handling and safety checks are integrated into that execution path. This figure is a **source-derived overview**, not a timing measurement.
+### 1. Keep interrupt work short and acquire data asynchronously
 
-## 1. Timestamped IMU acquisition
+I use independent BMI088 accelerometer and gyroscope data-ready signals to record pending acquisition events and their timestamps. SPI DMA then handles transfers outside the data-ready interrupt. Because the two sensors share acquisition resources, the pipeline prioritizes gyroscope work while periodically servicing pending accelerometer requests.
 
-![BMI088 acquisition and sensor-data pipeline](media/imu-pipeline.svg)
+**Code:** [pipeline.c](firmware/stm32/Core/Src/pipeline.c) · [main.c](firmware/stm32/Core/Src/main.c)
 
-- Independent BMI088 ACC/GYR data-ready interrupts record pending events and timestamps instead of blocking on SPI inside the interrupt.
-- SPI DMA transfers are arbitrated, prioritizing gyro while periodically servicing pending accelerometer work.
-- Timestamped ring buffers bridge acquisition and processing. Overflow and backlog can discard older samples; this is **not** advertised as an entirely lock-free pipeline.
-- Gyro-driven pairing picks an appropriate earlier accelerometer sample, checks sample age, and computes estimator `dt` from timestamps. The main loop includes catch-up policies when processing falls behind.
+### 2. Separate acquisition from consumption and check sample age
 
-**Read the code:** [DMA pipeline](firmware/stm32/Core/Src/pipeline.c) · [Ring buffer](firmware/stm32/Core/Src/ringbuf_spsc.c) · [Timestamp pairing](firmware/stm32/Core/Src/sync_pair.c) · [Main scheduling](firmware/stm32/Core/Src/main.c)
+I placed timestamped ring buffers between acquisition and main-loop processing. The estimator is driven by gyroscope timestamps: it selects an accelerometer sample no newer than the gyro sample, checks its age, and derives integration `dt` from the gyro timeline. This allows stale accelerometer correction to be limited rather than silently treating old samples as current data.
 
-## 2. Attitude and control
+**Code:** [ringbuf_spsc.c](firmware/stm32/Core/Src/ringbuf_spsc.c) · [sync_pair.c](firmware/stm32/Core/Src/sync_pair.c) · [fusion_mahony.c](firmware/stm32/Core/Src/fusion_mahony.c)
 
-Roll and pitch use a cascaded structure (angle command → angular-rate command → rate controller). Yaw has a separate control path. The motor mixer constrains and distributes control commands to the outputs. The Mahony method is a published algorithm; **this project's C implementation is author-written**, not a claim of inventing the algorithm.
+### 3. Define behavior for backlog and DMA faults
 
-**Read the code:** [Mahony estimator](firmware/stm32/Core/Src/fusion_mahony.c) · [Angle loop](firmware/stm32/FlightController/fc_control/fc_angle.c) · [Rate loop](firmware/stm32/FlightController/fc_control/fc_rate.c) · [Yaw](firmware/stm32/FlightController/fc_control/fc_yaw.c) · [Mixing](firmware/stm32/FlightController/fc_output/fc_mixer_out.c)
+I did not assume the main loop would always keep up. The firmware tracks queue depth and sample lag, adjusts processing work to catch up, and can discard older events or samples under backlog conditions. SPI DMA timeout recovery and fault escalation are separate from the normal sampling path.
 
-Barometric control modules are included ([MS5611 driver](firmware/stm32/Core/Src/ms5611.c), [altitude hold](firmware/stm32/FlightController/fc_control/fc_alt_hold.c)); this source presence **does not by itself establish validated altitude-hold flight performance**.
+These are concrete design choices for how an embedded control system behaves under load or faults; measured latency, throughput, and jitter still require on-target profiling.
 
-## 3. Fault handling and safe re-entry
+**Code:** [pipeline.c](firmware/stm32/Core/Src/pipeline.c) · [main.c](firmware/stm32/Core/Src/main.c)
 
-![Acquisition recovery, fault handling and guarded re-entry](media/fault-handling.svg)
+## Attitude estimation and control
 
-The code contains SPI/DMA recovery attempts and flight-safety paths that can latch a stop, disarm and require a guarded re-arm. Barometer data freshness can also govern exit from altitude-hold logic. These are **implemented behaviors subject to on-target verification**, not a claim that all failure cases have been flight-tested.
+I wrote `fusion_mahony.c/h` as a C implementation based on the published Mahony estimation method. In the controller, roll and pitch follow a cascaded angle-to-rate structure, yaw has a separate path, and the mixer distributes bounded commands to the four outputs.
 
-**Read the code:** [Safety conditions](firmware/stm32/FlightController/fc_safety/fc_fs.c) · [Arming](firmware/stm32/FlightController/fc_safety/fc_arm.c) · [Integration](firmware/stm32/FlightController/fc_core/fc_core.c)
+I also wrote the `ms5611.c/h` barometer driver and integrated it with altitude and vertical-speed estimation and altitude-hold code. **Having the code is not the same as demonstrating altitude-hold flight performance**; I do not present uncorrelated historical material as validation of this cleaned source snapshot.
 
-## Historical bench captures
+**Code:** [Mahony](firmware/stm32/Core/Src/fusion_mahony.c) · [Angle loop](firmware/stm32/FlightController/fc_control/fc_angle.c) · [Rate loop](firmware/stm32/FlightController/fc_control/fc_rate.c) · [Yaw](firmware/stm32/FlightController/fc_control/fc_yaw.c) · [Mixer](firmware/stm32/FlightController/fc_output/fc_mixer_out.c) · [MS5611](firmware/stm32/Core/Src/ms5611.c) · [Altitude hold](firmware/stm32/FlightController/fc_control/fc_alt_hold.c)
 
-The following original VOFA screenshots were recorded during controller bench tuning in **December 2025**. The old `I0–I5` channel map, physical units, firmware revision and test conditions have not been recovered, so **no PID gains, rise-time figures, stability margins or before/after performance improvements are inferred from these images**. They are retained as genuine process records, not numerical validation of the current release copy.
+## Fault handling and re-arming
 
-| 2025-12-08 — oscillatory transient | 2025-12-08 — decaying response |
+![DMA recovery, fault latching, and guarded re-entry](media/fault-handling.svg)
+
+I separated recovery from permission to run the motors. The firmware includes SPI/DMA recovery attempts, sensor freshness checks, receiver and arming gates, motor-stop handling, and guarded re-arming after a latched fault. Recovering sensor data alone should not automatically re-arm the vehicle.
+
+**Code:** [fc_fs.c](firmware/stm32/FlightController/fc_safety/fc_fs.c) · [fc_arm.c](firmware/stm32/FlightController/fc_safety/fc_arm.c) · [fc_core.c](firmware/stm32/FlightController/fc_core/fc_core.c)
+
+## My bench-tuning records
+
+I used VOFA to inspect transient responses during bench tuning. I kept both strongly oscillatory and decaying traces because they document the actual debugging process—not just its most presentable moments.
+
+| Dec 8, 2025 · Oscillatory transient | Dec 8, 2025 · Decaying response |
 | --- | --- |
-| ![Historical VOFA bench trace showing a transient with oscillations](media/bench/vofa-2025-12-08-221113.png) | ![Historical VOFA bench trace showing a transient that decays toward zero](media/bench/vofa-2025-12-08-220512.png) |
+| ![Original VOFA bench capture with a marked oscillatory transient](media/bench/vofa-2025-12-08-221113.png) | ![Original VOFA bench capture showing a decaying response](media/bench/vofa-2025-12-08-220512.png) |
 
-**Another historical capture (2025-12-09):** [Two visible traces in VOFA](media/bench/vofa-2025-12-09-212009.png) (channel identities unverified).
+[Another dual-trace bench capture from Dec 9, 2025](media/bench/vofa-2025-12-09-212009.png)
 
-Real aircraft photos and flight-video links can be added to `media/photos/` and `media/flight/` after their dates and test conditions are confirmed. The repository does not currently include such evidence.
+These are my original historical captures. The old `I0–I5` channel mapping, physical units, exact excitation conditions, and corresponding firmware revision have not been fully recovered. I therefore do not infer PID gains, percentage improvements, or quantified stability metrics from the screenshots. I plan to add aircraft photographs, bench clips, and flight footage with their original context.
 
-## Build and verification scope
+## Source, build, and current verification scope
 
-- **Build entry:** [Keil µVision project](firmware/stm32/MDK-ARM/fly1.0.uvprojx) — target `fly1.0`, ARM Compiler 5.06 update 5 build 528, STM32F4xx DFP 2.17.0. See [BUILD.md](BUILD.md).
-- **Recorded local rebuild:** 0 errors, 4 unused-function warnings, with linking and HEX generation. The historical build log was retained separately by the author, not bundled into this minimal presentation repository. This archive has **not been independently rebuilt**.
-- **Host-level regression:** interrupt-state preservation was previously checked with mocked interrupt primitives; this is not hardware-level concurrency validation.
-- **Not established for this repository snapshot:** on-board runtime timing, full failsafe behavior, altitude-hold flight performance or suitability for operational flight.
-- **Special tool defaults:** `FC_MOTOR_TEST_ENABLE=0` and `FC_ESC_CAL_ENABLE=0` in the published preparation copy. **Remove all propellers before bench or motor checks.**
+The repository contains the STM32 firmware source, Keil project, CubeMX metadata, and required HAL/CMSIS dependencies. Start with [fly1.0.uvprojx](firmware/stm32/MDK-ARM/fly1.0.uvprojx) and see [BUILD.md](BUILD.md) for toolchain details.
 
-## Directory layout
+My earlier Keil rebuild record reported **0 errors / 4 warnings**, with successful linking and HEX generation. I have not independently rebuilt this stripped-down publication snapshot. Some interrupt-state paths were host-tested using mocked primitives; full on-target timing, fault behavior, altitude hold, and flight safety are not established by those tests. **This repository is a source and engineering portfolio, not a flight-qualified firmware release.**
 
-```text
-firmware/stm32/        STM32 source, HAL/CMSIS, CubeMX metadata, Keil project
-media/                Source-derived architecture SVGs, editable .mmd diagrams, authentic bench captures
-README.zh-CN.md       Chinese project overview
-BUILD.md              Minimal build instructions
-THIRD_PARTY_NOTICES.md  Dependency licenses and attribution boundaries
-```
+In the publication copy, `FC_MOTOR_TEST_ENABLE=0` and `FC_ESC_CAL_ENABLE=0`. Remove all propellers before motor or bench checks.
 
-### Attribution and release status
-
-The repository author confirmed personal authorship of `ms5611.c/.h` and `fusion_mahony.c/.h`; ownership of additional custom components must be completed before a project-level license is applied. HAL/CMSIS/ST/Bosch sources keep their own notices. **No root LICENSE is included yet**; publication does not automatically grant permission to reuse otherwise-unlicensed original code. See [third-party notices](THIRD_PARTY_NOTICES.md).
+**Authorship and licensing:** I wrote the specific implementations in `ms5611.c/h` and `fusion_mahony.c/h`; I do not claim invention of the Mahony method or ownership of sensor protocols. Third-party ST, Arm CMSIS, and Bosch components retain their notices. A root license covering the remaining project-owned source has not yet been finalized; public visibility alone does not grant reuse rights. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
