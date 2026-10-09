@@ -90,4 +90,4 @@
 
 源码在 [`firmware/stm32/`](firmware/stm32/)，用 **Keil µVision 5 + Arm Compiler 5** 打开 [`fly1.0.uvprojx`](firmware/stm32/MDK-ARM/fly1.0.uvprojx)，选择 `fly1.0` 并执行 **Rebuild all target files**。此前本地保存的构建记录为 0 Errors / 4 Warnings；当前发布副本没有重新完成全套板端与飞行安全验证。实机调试前请先拆除桨叶。
 
-本项目应用层代码由我开发与集成，STM32 HAL、CMSIS 和 Bosch BMI088 Sensor API 等使用相应厂商组件，并保留原有版权声明。参见 [第三方组件说明](THIRD_PARTY_NOTICES.md)。自有代码的统一开源授权尚待确定。
+本项目应用层代码由我开发与集成，STM32 HAL、CMSIS 和 Bosch BMI088 Sensor API 等使用相应厂商组件，并保留原有版权声明。参见 [第三方组件说明](THIRD_PARTY_NOTICES.md)。本项目中由我编写且拥有授权权利的飞控应用代码采用 [BSD-3-Clause License](LICENSE)，STM32 HAL、CMSIS、Bosch Sensor API 等第三方组件遵循各自原有许可证。
