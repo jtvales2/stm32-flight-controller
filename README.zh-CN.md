@@ -1,82 +1,84 @@
-# STM32 飞行控制器
+# STM32 自研飞控系统
 
-基于 **STM32F407ZGTx** 的模块化四旋翼飞控工程，包含 BMI088 异步采集、带时间戳的传感器配对、Mahony 姿态估计、角度/角速度/Yaw 控制、SBUS 遥控输入，以及 MS5611 定高相关代码。
+**基于 STM32F407 的四旋翼飞控固件项目。** 重点展示异步 IMU 采集、带时间戳的数据处理、姿态估计、闭环控制，以及异常恢复与安全状态管理。
 
-[English](README.md) · [构建说明](BUILD.md) · [验证状态](docs/validation-status.md) · [修改记录](docs/changes/README.md) · [实测证据整理](docs/evidence-guide.md)
+[English](README.md) · [固件源码](firmware/stm32/) · [编译说明](BUILD.md) · [第三方版权说明](THIRD_PARTY_NOTICES.md)
 
-工程展示从传感器中断到电机指令的完整路径，重点包括异步采集、并发边界、控制调度以及解锁和故障状态切换。保留原有 `fly1.0` 实现，整理目录、构建入口和修改记录，方便代码审阅与技术交流。
+> **说明：** 这里公开的是经过目录整理的源码及部分历史台架波形。架构图根据源码绘制，不代表实测性能。已有 Keil 编译记录，但这份整理版本并非经过完整实机/飞行安全验证的固件。项目自有代码的最终授权范围仍需确认。
 
-**当前状态：开源准备。** 已记录的 Keil 全量构建为 **0 错误 / 4 警告**；使用中断模拟原语的主机回归检查已通过。目标板运行、实物、飞行及定高验证仍待完成，具体范围以[带日期的验证记录](docs/validation-status.md)为准。公开发布前还需完成原创代码授权和其余源码归属确认。
+## 核心硬件与功能
 
-## 系统结构
-
-![根据源码绘制的系统架构](media/system-architecture.svg)
-
-主循环服务 IMU DMA、SBUS 接收、气压计转换和异步待处理事项，消费陀螺仪样本并驱动融合与控制。独立的 TIM2 中断调用 1 kHz 看门狗。模式选择、定高请求、解锁前校准和电机限幅分别由独立模块处理。
-
-| 部分 | 当前源码实现 |
+| 层次 | 对应实现 |
 | --- | --- |
-| 主控 | STM32F407ZGTx、Cortex-M4F；内部 16 MHz HSI，标称 SYSCLK 为 168 MHz；实际运行时序待上板验证 |
-| IMU | BMI088 加速度计/陀螺仪，DRDY 时间戳与 SPI1 DMA |
-| 遥控 | USART6 SBUS，循环接收 DMA |
-| 姿态 | Mahony 六轴四元数滤波，输出欧拉角用于控制 |
-| 气压计 | MS5611 调度式 SPI 转换，相对高度与垂直速度估计 |
-| 电机 | TIM3 四路 PWM，混控与输出限幅 |
-| 诊断 | UART 日志、采集计数器、时间戳/延迟统计及控制事件 |
+| MCU | STM32F407ZGTx，Cortex-M4F，HSI/PLL 标称 SYSCLK 168 MHz |
+| IMU | BMI088 加速度计、陀螺仪，独立 DRDY 与 SPI1 DMA |
+| 姿态估计 | 时间戳配对、Mahony 六轴四元数姿态估计（具体代码由作者编写） |
+| 控制 | Roll/Pitch 角度外环 P + 角速度内环 PD；Yaw 独立控制 |
+| 气压计 | 作者编写的 MS5611 驱动、气压高度/垂直速度处理和定高控制逻辑 |
+| 遥控与输出 | USART6 DMA SBUS 接收、四路电机 PWM 与混控 |
+| 异常处理 | DMA 超时恢复、数据新鲜度、解锁约束、故障锁存与停止输出 |
 
-CH6 三段开关分别请求 ACRO 角速度模式、ANGLE 自稳模式、ANGLE 加定高。实际模式切换与定高进入仍受代码中的条件约束，开关位置不代表功能已经通过实物验证。当前六轴配置不提供磁力计参考的绝对航向。
+## 系统架构
 
-## 异步采集与时间处理
+![基于源码绘制的飞控系统架构](media/system-architecture.svg)
 
-![根据源码绘制的 IMU 数据处理链路](media/imu-pipeline.svg)
+系统由 IMU 中断/DMA 采集、带时间戳的缓冲区、主循环中的融合与控制，以及电机输出构成。图示是源码逻辑概览，**不是实时性实测结果**。
 
-DRDY 回调发布待处理时间戳，DMA 状态机负责传感器读取。仲裁优先服务陀螺仪；连续完成三次陀螺仪读取后，若加速度计待处理则插入一次读取。积压事件会合并，并通过 merge/drop 计数记录跳过事件。带时间戳的数据环连接中断生产者和主循环消费者。
+## 1. 异步 IMU 数据链
 
-配对模块消费最旧的陀螺仪样本，并选择时间戳不晚于它的最新加速度计样本。融合 `dt` 来自陀螺仪时间戳；非单调时间戳被拒绝，过旧的加速度计样本不参与姿态修正。主循环根据队列水位和样本延迟调整处理预算及追赶策略。图中描述的是实现策略，实际吞吐率和延迟需要原始日志支持。
+![BMI088 异步采集和数据处理链路](media/imu-pipeline.svg)
 
-## 故障处置与重新进入
+- BMI088 ACC/GYR DRDY 中断记录待处理事件及时间戳，不在中断内进行阻塞式 SPI 读取。
+- SPI DMA 仲裁优先处理陀螺仪，并按策略穿插加速度计请求。
+- 时间戳环形缓冲区连接采集与主循环，积压或溢出时可丢弃较旧样本；**不将其宣传为全程无锁**。
+- 按陀螺仪时间戳配对加速度样本、检查新鲜度，并计算估计器的积分时间。主循环包含积压追赶策略。
 
-![根据源码绘制的采集恢复、故障锁存和定高退出流程](media/fault-handling.svg)
+源码：[DMA 管线](firmware/stm32/Core/Src/pipeline.c) · [Ring Buffer](firmware/stm32/Core/Src/ringbuf_spsc.c) · [时间配对](firmware/stm32/Core/Src/sync_pair.c) · [主循环](firmware/stm32/Core/Src/main.c)
 
-SPI/DMA 恢复可以重新启动采集。飞行故障锁存原因、取消解锁、重置控制状态，并写入电机停止脉宽。传感器或遥控数据恢复不会自动重新解锁，清除锁存和新的 ARM 上升沿都需要满足相应条件。气压计数据过期由主循环处理并退出定高，重新进入需要有效数据、进入条件以及定高开关 OFF→ON。
+## 2. 姿态估计与控制
 
-## 代码入口
+Roll/Pitch 采用角度外环和角速度内环的级联控制结构，Yaw 采用独立控制路径，四电机混控对输出指令进行分配和约束。Mahony 方法属于已有公开算法，**本项目中的具体 C 源码由作者编写**，不宣称发明该算法。
 
-以下路径均位于 `firmware/stm32`。
+源码：[Mahony](firmware/stm32/Core/Src/fusion_mahony.c) · [角度环](firmware/stm32/FlightController/fc_control/fc_angle.c) · [角速度环](firmware/stm32/FlightController/fc_control/fc_rate.c) · [Yaw](firmware/stm32/FlightController/fc_control/fc_yaw.c) · [混控输出](firmware/stm32/FlightController/fc_output/fc_mixer_out.c)
 
-| 模块 | 入口文件 |
+另外保留了 [MS5611 驱动](firmware/stm32/Core/Src/ms5611.c) 和 [定高逻辑](firmware/stm32/FlightController/fc_control/fc_alt_hold.c)，**不能仅凭代码存在就宣称定高实飞性能已经验证**。
+
+## 3. 故障处理与重新解锁
+
+![外设恢复、安全锁存与重新解锁流程](media/fault-handling.svg)
+
+工程具有 SPI/DMA 异常恢复路径、解锁/故障条件检查、停止输出与重新解锁条件。气压计样本过期也可触发退出定高的处理。图中是**实现路径，不是完整故障注入测试证明**。
+
+源码：[安全处理](firmware/stm32/FlightController/fc_safety/fc_fs.c) · [解锁状态](firmware/stm32/FlightController/fc_safety/fc_arm.c) · [核心集成](firmware/stm32/FlightController/fc_core/fc_core.c)
+
+## 历史台架波形
+
+以下是作者在 **2025 年 12 月** 保存的 VOFA 台架调试截图。由于当时 `I0–I5` 的通道映射、物理单位、固件版本和具体测试条件尚未恢复，**不根据图片推断具体 PID 参数、性能提升百分比或定量稳定性指标**。这些图片用于展示真实开发过程，不代表当前发布副本的性能验证。
+
+| 2025-12-08：明显振荡的瞬态 | 2025-12-08：逐渐衰减的响应 |
 | --- | --- |
-| 主调度与集成 | [main.c](firmware/stm32/Core/Src/main.c)、[fc_core.c](firmware/stm32/FlightController/fc_core/fc_core.c) |
-| IMU DMA 与缓冲 | [pipeline.c](firmware/stm32/Core/Src/pipeline.c)、[ringbuf_spsc.c](firmware/stm32/Core/Src/ringbuf_spsc.c) |
-| 时间配对与姿态 | [sync_pair.c](firmware/stm32/Core/Src/sync_pair.c)、[fusion_mahony.c](firmware/stm32/Core/Src/fusion_mahony.c) |
-| 角度/角速度/Yaw 控制 | [fc_angle.c](firmware/stm32/FlightController/fc_control/fc_angle.c)、[fc_rate.c](firmware/stm32/FlightController/fc_control/fc_rate.c)、[fc_yaw.c](firmware/stm32/FlightController/fc_control/fc_yaw.c) |
-| 气压计与定高 | [ms5611.c](firmware/stm32/Core/Src/ms5611.c)、[fc_baro.c](firmware/stm32/FlightController/fc_estimator/fc_baro.c)、[fc_alt_hold.c](firmware/stm32/FlightController/fc_control/fc_alt_hold.c) |
-| 解锁与故障保护 | [fc_arm.c](firmware/stm32/FlightController/fc_safety/fc_arm.c)、[fc_fs.c](firmware/stm32/FlightController/fc_safety/fc_fs.c)、[fc_time.c](firmware/stm32/FlightController/fc_core/fc_time.c) |
-| 配置与电机输出 | [fc_cfg.h](firmware/stm32/FlightController/fc_cfg/fc_cfg.h)、[fc_mixer_out.c](firmware/stm32/FlightController/fc_output/fc_mixer_out.c)、[motors.c](firmware/stm32/Core/Src/motors.c) |
+| ![VOFA 历史台架波形：振荡瞬态](media/bench/vofa-2025-12-08-221113.png) | ![VOFA 历史台架波形：响应逐渐衰减](media/bench/vofa-2025-12-08-220512.png) |
 
-## 构建与验证
+另有 [2025-12-09 的双轨迹历史截图](media/bench/vofa-2025-12-09-212009.png)，通道含义尚未确认。
 
-在 Keil 中打开 [fly1.0.uvprojx](firmware/stm32/MDK-ARM/fly1.0.uvprojx)，全量重新构建目标 `fly1.0`。已记录工具链为 **ARM Compiler 5.06 update 5 build 528**，器件包为 `Keil.STM32F4xx_DFP 2.17.0`。构建步骤、变更默认值、警告及主机检查命令见 [BUILD.md](BUILD.md)。
+后续可将确认日期和测试条件的飞机照片、飞行视频链接分别添加到 `media/photos/` 和 `media/flight/`。当前仓库尚未包含这些材料。
 
-| 验证层级 | 已记录结果及边界 |
-| --- | --- |
-| 目标工程全量构建 | 编译、链接、HEX 生成通过；本轮构建为 0 错误、4 警告 |
-| 主机回归 | SBUS、气压计发布、异步过期处理及陀螺仪偏置更新使用中断模拟原语检查通过，覆盖进入时 PRIMASK 为 0 和 1 |
-| 目标板并发与时序 | 待验证 |
-| 台架、飞行与定高 | 待验证；未提供经过验证的飞行固件 |
+## 构建与验证边界
 
-开源准备副本中的 `FC_MOTOR_TEST_ENABLE` 与 `FC_ESC_CAL_ENABLE` 默认均为 `0`。整理过程保留控制增益及 IMU 时序。任何实物检查前先拆除桨叶。架构图说明源码行为，不作为测试结果；实物照片、波形和视频由作者后续补充，并附原始证据和条件。
+- **构建入口：** [Keil 工程](firmware/stm32/MDK-ARM/fly1.0.uvprojx)，目标 `fly1.0`。已记录 ARM Compiler 5.06 update 5 build 528、STM32F4xx DFP 2.17.0；操作见 [BUILD.md](BUILD.md)。
+- **历史本地编译记录：** 0 Error / 4 Warning，曾完成链接和 HEX 生成；原始日志由作者另行存档，本精简仓库不附带完整审计日志。本次重构**未重新执行 Keil 编译**。
+- **历史主机回归：** 使用模拟中断原语验证了部分临界区状态恢复路径，不代表真实硬件并发验证。
+- **当前尚未证明：** 当前副本的实机时序、全部故障保护、定高飞行结果及实飞安全性。
+- **安全默认设置：** `FC_MOTOR_TEST_ENABLE=0`、`FC_ESC_CAL_ENABLE=0`。任何台架/电机检查前应拆除全部桨叶。
 
-## 目录与授权
+## 目录与版权
 
 ```text
-firmware/stm32/       固件、HAL/CMSIS 依赖、Keil 工程与 CubeMX 元数据
-docs/                修改记录、验证日志与验证说明
-media/               基于源码绘制的 SVG 与可编辑 Mermaid 源文件
-BUILD.md             工具链和重新构建步骤
-THIRD_PARTY_NOTICES.md  第三方声明与来源记录
+firmware/stm32/      完整固件源码、HAL/CMSIS、CubeMX 和 Keil 工程
+media/               系统架构图、可编辑 Mermaid 源图和历史台架波形
+README.md            英文项目主页
+BUILD.md             编译说明
+THIRD_PARTY_NOTICES.md   第三方依赖、版权边界
 ```
 
-作者已确认 `ms5611.c/.h` 与 `fusion_mahony.c/.h` 为独立编写。原创代码许可证和其余自定义源码归属仍在确认。Bosch、ST 和 CMSIS 文件保留已有版权及适用许可证，项目许可证不能替代第三方许可。详见[第三方声明](THIRD_PARTY_NOTICES.md)及[发布检查表](docs/release-checklist.md)。
-
-图示通过 [generate_diagrams.py](media/generate_diagrams.py) 使用矢量元素确定性生成，逻辑流程同时保留 `.mmd` 源文件。[图示说明](docs/diagram-notes.md)列出对应源码和解释边界。
+项目作者确认 `ms5611.c/.h` 与 `fusion_mahony.c/.h` 由本人编写；其余自定义源码仍需完成归属确认。ST、Bosch、CMSIS 等第三方源文件保留原有声明。**当前尚未添加项目根目录 LICENSE**，公开源码并不自动意味着这些未明确授权的自有代码可以自由再使用。详情见 [版权说明](THIRD_PARTY_NOTICES.md)。

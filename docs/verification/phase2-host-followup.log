@@ -1,3 +1,0 @@
-PASS: exact fc_core_service_async, PRIMASK 0/1, stale/active/switch paths and events
-PASS: exact bias get/set and frontend SetBias, PRIMASK 0/1, null/normal/alias paths
-LIMIT: host state/mocks do not verify CMSIS instructions, Keil, latency, initialization, or flight safety.
