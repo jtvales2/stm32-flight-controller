@@ -4,7 +4,7 @@
 
 `STM32F407` · `BMI088` · `MS5611` · `SPI DMA` · `Ring Buffer` · `Mahony` · `Cascaded Control` · `Failsafe`
 
-[查看固件源码](firmware/stm32/) · [Keil 编译说明](BUILD.md) · [第三方代码与版权说明](THIRD_PARTY_NOTICES.md)
+[查看固件源码](firmware/stm32/) · [第三方代码与版权说明](THIRD_PARTY_NOTICES.md)
 
 ## 为什么做这套飞控
 
