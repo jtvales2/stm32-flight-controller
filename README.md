@@ -82,7 +82,7 @@
 
 ## 源码与编译
 
-固件源码位于 [`firmware/stm32/`](firmware/stm32/)。使用 **Keil µVision 5 + Arm Compiler 5**，打开 [`fly1.0.uvprojx`](firmware/stm32/MDK-ARM/fly1.0.uvprojx)，选择 `fly1.0`，执行 **Rebuild all target files**。历史本地构建记录为 **0 Errors / 4 Warnings**。
+固件源码位于 [`firmware/stm32/`](firmware/stm32/)。使用 **Keil µVision 5 + Arm Compiler 5**，打开 [`fly1.0.uvprojx`](firmware/stm32/MDK-ARM/fly1.0.uvprojx)，选择 `fly1.0`，执行 **Rebuild all target files**。
 
 该仓库主要用于源码交流与工程作品展示。当前整理版本尚未重新完成全套硬件和飞行安全验证；任何实机调试前请先拆除桨叶。
 
