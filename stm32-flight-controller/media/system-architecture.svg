@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1020" viewBox="0 0 1600 1020" role="img" aria-labelledby="title desc">
+<title id="title">From sensor events to motor commands</title><desc id="desc">STM32F407ZGTx · BMI088 · SBUS · MS5611 · four PWM outputs Code-derived conceptual flow; not measured hardware or flight evidence.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2474b7"/></marker><marker id="teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#237b77"/></marker></defs>
+<rect x="0" y="0" width="1600" height="1020" rx="0" fill="#faf8f3" stroke="none" stroke-width="2"/>
+<text x="60" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#2474b7" font-weight="700" letter-spacing="3">STM32 FLIGHT CONTROLLER</text>
+<text x="60" y="128" font-family="Segoe UI, Arial, sans-serif" font-size="49" fill="#152c46" font-weight="700" letter-spacing="0">From sensor events to motor commands</text>
+<text x="60" y="176" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">STM32F407ZGTx · BMI088 · SBUS · MS5611 · four PWM outputs</text>
+<text x="60" y="235" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#54667a" font-weight="700" letter-spacing="2">INPUTS</text>
+<text x="460" y="235" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#54667a" font-weight="700" letter-spacing="2">MAIN LOOP + INTERRUPT CALLBACKS</text>
+<text x="1200" y="235" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#54667a" font-weight="700" letter-spacing="2">ACTUATION</text>
+<rect x="60" y="266" width="340" height="136" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="82" y="291" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="103" y="309" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">BMI088</text>
+<text x="88" y="343" font-family="Segoe UI, Arial, sans-serif" font-size="23" fill="#54667a" font-weight="400" letter-spacing="0">Accel + gyro DRDY / SPI1</text>
+<text x="88" y="387" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">pipeline.c</text>
+<rect x="60" y="426" width="340" height="136" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="82" y="451" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="103" y="469" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">SBUS receiver</text>
+<text x="88" y="503" font-family="Segoe UI, Arial, sans-serif" font-size="23" fill="#54667a" font-weight="400" letter-spacing="0">USART6 circular DMA</text>
+<text x="88" y="547" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">sbus.c → fc_rc.c</text>
+<rect x="60" y="586" width="340" height="136" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="82" y="611" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="103" y="629" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">MS5611 barometer</text>
+<text x="88" y="663" font-family="Segoe UI, Arial, sans-serif" font-size="23" fill="#54667a" font-weight="400" letter-spacing="0">Scheduled SPI conversions</text>
+<text x="88" y="707" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">ms5611.c → fc_baro.c</text>
+<rect x="460" y="266" width="680" height="456" rx="20" fill="#eef4f8" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="488" y="290" width="624" height="118" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="510" y="315" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="531" y="333" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Asynchronous acquisition</text>
+<text x="516" y="367" font-family="Segoe UI, Arial, sans-serif" font-size="23" fill="#54667a" font-weight="400" letter-spacing="0">DMA arbitration → timestamped rings</text>
+<text x="516" y="393" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">pipeline.c · ringbuf_spsc.c</text>
+<rect x="488" y="439" width="624" height="118" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="510" y="464" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="531" y="482" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Timestamp pairing + attitude</text>
+<text x="516" y="516" font-family="Segoe UI, Arial, sans-serif" font-size="23" fill="#54667a" font-weight="400" letter-spacing="0">Causal accel pairing → 6-DoF Mahony</text>
+<text x="516" y="542" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">sync_pair.c · fusion_mahony.c</text>
+<rect x="488" y="588" width="624" height="124" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="510" y="613" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="531" y="631" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Controller integration</text>
+<text x="516" y="665" font-family="Segoe UI, Arial, sans-serif" font-size="23" fill="#54667a" font-weight="400" letter-spacing="0">RC / arming / health gates → control</text>
+<text x="516" y="697" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_core.c → fc_control.c</text>
+<rect x="1200" y="440" width="340" height="258" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="1222" y="465" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="1243" y="491" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Motor output</text>
+<text x="1228" y="534" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Angle / rate / yaw</text>
+<text x="1228" y="566" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Throttle / altitude hold</text>
+<text x="1228" y="598" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Mixer + output limits</text>
+<text x="1228" y="630" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">TIM3 PWM × 4</text>
+<text x="1228" y="674" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_mixer_out.c · motors.c</text>
+<path d="M 400 334 L 488 334" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 800 408 L 800 439" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 800 557 L 800 588" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 400 494 L 430 494 L 430 624 L 488 624" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 400 654 L 488 654" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 1112 643 L 1166 643 L 1166 569 L 1200 569" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="60" y="788" width="1480" height="138" rx="20" fill="#152c46" stroke="none" stroke-width="2"/>
+<text x="88" y="833" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#91caef" font-weight="700" letter-spacing="2">SUPERVISION</text>
+<text x="330" y="833" font-family="Segoe UI, Arial, sans-serif" font-size="26" fill="#ffffff" font-weight="700" letter-spacing="0">TIM2 1 kHz watchdog · IMU health · RC validity · tilt latch</text>
+<text x="88" y="884" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#d9e8f4" font-weight="400" letter-spacing="0">Latched faults disarm and reset controller state; stale barometer data exits altitude hold.</text>
+<path d="M 1370 788 L 1370 710" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#arrow)"/>
+<text x="60" y="982" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#54667a" font-weight="400" letter-spacing="0">Code map: main.c / fc_core.c connect the modules. Diagram describes implementation, not validation results.</text>
+</svg>

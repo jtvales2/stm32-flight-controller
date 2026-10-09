@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1240" viewBox="0 0 1600 1240" role="img" aria-labelledby="title desc">
+<title id="title">Recovery has distinct boundaries</title><desc id="desc">A peripheral restart, a latched flight stop and an altitude-hold exit have different consequences. Code-derived conceptual flow; not measured hardware or flight evidence.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2474b7"/></marker><marker id="teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#237b77"/></marker></defs>
+<rect x="0" y="0" width="1600" height="1240" rx="0" fill="#faf8f3" stroke="none" stroke-width="2"/>
+<text x="60" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#2474b7" font-weight="700" letter-spacing="3">STM32 FLIGHT CONTROLLER</text>
+<text x="60" y="128" font-family="Segoe UI, Arial, sans-serif" font-size="49" fill="#152c46" font-weight="700" letter-spacing="0">Recovery has distinct boundaries</text>
+<text x="60" y="176" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">A peripheral restart, a latched flight stop and an altitude-hold exit have different consequences.</text>
+<text x="60" y="245" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#54667a" font-weight="700" letter-spacing="1.5">ACQUISITION RECOVERY</text>
+<text x="580" y="245" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#54667a" font-weight="700" letter-spacing="1.5">LATCHED FLIGHT STOP</text>
+<text x="1100" y="245" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#54667a" font-weight="700" letter-spacing="1.5">ALTITUDE-HOLD EXIT</text>
+<rect x="60" y="284" width="440" height="185" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="82" y="309" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="103" y="335" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">SPI / DMA interruption</text>
+<text x="88" y="378" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">SPI error callback, or</text>
+<text x="88" y="410" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">in-flight DMA longer than 10 ms</text>
+<text x="88" y="445" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">pipeline.c</text>
+<rect x="60" y="520" width="440" height="220" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="82" y="545" width="5" height="32" rx="2" fill="#237b77" stroke="none" stroke-width="2"/>
+<text x="103" y="571" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Release and restart</text>
+<text x="88" y="614" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Release chip select; stop DMA</text>
+<text x="88" y="646" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Timeout: reset SPI ready state</text>
+<text x="88" y="678" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Clear in-flight state; request kick</text>
+<text x="88" y="716" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">imu_pipeline_dma_poll()</text>
+<path d="M 280 469 L 280 520" fill="none" stroke="#237b77" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#teal)"/>
+<path d="M 500 630 L 540 630 L 540 827 L 280 827 L 280 752" fill="none" stroke="#237b77" stroke-width="3.5" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#teal)"/>
+<text x="60" y="892" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Polling resumes pending transfers.</text>
+<text x="60" y="926" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">More than 3 DMA timeouts in the</text>
+<text x="60" y="960" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">1-second window while armed</text>
+<text x="60" y="994" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">also triggers a latched IMU stop.</text>
+<rect x="580" y="284" width="440" height="185" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="602" y="309" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="623" y="335" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Fault detectors</text>
+<text x="608" y="378" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">RC failsafe / timeout; IMU health</text>
+<text x="608" y="410" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Control stall / hard lag; tilt</text>
+<text x="608" y="445" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_rc.c · fc_time.c · fc_fs.c</text>
+<rect x="580" y="520" width="440" height="180" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="602" y="545" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="623" y="571" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Emergency stop</text>
+<text x="608" y="614" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Latch reason; set armed = 0</text>
+<text x="608" y="646" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Reset control; write stop pulses</text>
+<text x="608" y="676" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_emergency_stop()</text>
+<path d="M 800 469 L 800 520" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="580" y="750" width="440" height="210" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="602" y="775" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="623" y="801" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Deliberate latch clear</text>
+<text x="608" y="844" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">ARM off held &gt; 300 ms</text>
+<text x="608" y="876" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Low throttle + level + stable RC</text>
+<text x="608" y="908" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Clearing keeps motors disarmed</text>
+<text x="608" y="936" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_arm.c → fc_fs.c</text>
+<path d="M 800 700 L 800 750" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="580" y="987" width="440" height="185" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="602" y="1012" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="623" y="1038" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Fresh ARM 0 → 1</text>
+<text x="608" y="1081" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">AHRS reset complete; no latch</text>
+<text x="608" y="1113" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Stable RC + low throttle + level</text>
+<text x="608" y="1148" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_arm_update()</text>
+<path d="M 800 960 L 800 987" fill="none" stroke="#2474b7" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="1100" y="284" width="440" height="185" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="1122" y="309" width="5" height="32" rx="2" fill="#2474b7" stroke="none" stroke-width="2"/>
+<text x="1143" y="335" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Stale barometer data</text>
+<text x="1128" y="378" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">TIM2 watchdog flags stale data</text>
+<text x="1128" y="410" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Main loop services pending flag</text>
+<text x="1128" y="445" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_core.c</text>
+<rect x="1100" y="520" width="440" height="220" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="1122" y="545" width="5" height="32" rx="2" fill="#237b77" stroke="none" stroke-width="2"/>
+<text x="1143" y="571" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Exit and reset ALT_HOLD</text>
+<text x="1128" y="614" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Invalidate barometer snapshot</text>
+<text x="1128" y="646" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Reset altitude controller state</text>
+<text x="1128" y="678" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Record exit if previously active</text>
+<text x="1128" y="716" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_core_service_async()</text>
+<path d="M 1320 469 L 1320 520" fill="none" stroke="#237b77" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#teal)"/>
+<rect x="1100" y="790" width="440" height="210" rx="20" fill="white" stroke="#d9e1e8" stroke-width="2"/>
+<rect x="1122" y="815" width="5" height="32" rx="2" fill="#237b77" stroke="none" stroke-width="2"/>
+<text x="1143" y="841" font-family="Segoe UI, Arial, sans-serif" font-size="27" fill="#152c46" font-weight="700" letter-spacing="0">Guarded re-entry</text>
+<text x="1128" y="884" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Valid barometer data + entry gates</text>
+<text x="1128" y="916" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">ALT switch OFF → ON required</text>
+<text x="1128" y="948" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#54667a" font-weight="400" letter-spacing="0">Attitude / rate control retained</text>
+<text x="1128" y="976" font-family="Consolas, monospace" font-size="20" fill="#54667a" font-weight="400" letter-spacing="0">fc_alt_hold.c</text>
+<path d="M 1320 740 L 1320 790" fill="none" stroke="#237b77" stroke-width="3.5" stroke-linejoin="round" marker-end="url(#teal)"/>
+<text x="1100" y="1034" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#152c46" font-weight="400" letter-spacing="0">Sensor data returning does not</text>
+<text x="1100" y="1068" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#152c46" font-weight="400" letter-spacing="0">automatically re-arm the aircraft.</text>
+<text x="60" y="1202" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#54667a" font-weight="400" letter-spacing="0">Code-derived flow. Flight-stop detectors are conditional on their code gates; hardware fault injection is pending.</text>
+</svg>

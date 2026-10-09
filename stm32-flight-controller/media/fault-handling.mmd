@@ -1,0 +1,18 @@
+flowchart TB
+    subgraph acquisition[Acquisition recovery]
+      spi["SPI error / DMA > 10 ms"] --> restart["Release chip select; stop DMA\nTimeout: reset SPI ready state\nClear in-flight; request next kick"]
+      restart --> poll["Poll pending transfers"]
+      timeouts["> 3 timeouts in 1-second window while armed"]
+    end
+    subgraph flightstop[Latched flight stop]
+      faults["Gated RC / IMU / control-stall / tilt detectors"] --> stop["Latch fault reason\nDisarm; reset control; write stop pulses"]
+      stop --> clear["ARM off > 300 ms\nLow throttle + level + stable RC"]
+      clear --> disarmed["Clear latch; remain disarmed"]
+      disarmed --> rearm["New ARM 0 → 1\nAHRS reset complete; no latch\nStable RC + low throttle + level"]
+    end
+    timeouts --> stop
+    subgraph altitude[Altitude-hold exit]
+      stale["Barometer stale watchdog flag"] --> service["Main-loop async service\nInvalidate barometer; reset ALT_HOLD"]
+      service --> entry["Valid barometer + entry gates\nALT switch OFF → ON required"]
+    end
+    classDef default fill:#ffffff,stroke:#2474b7,color:#152c46;

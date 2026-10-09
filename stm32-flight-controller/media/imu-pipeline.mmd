@@ -1,0 +1,11 @@
+flowchart LR
+    irq["DRDY IRQ\nTimestamp + deglitch"] --> pending["Latest pending timestamp + count\nCoalesced events counted as merge drops"]
+    pending --> dma["SPI DMA arbitration\nGyro preferred; accel served after 3 gyro reads"]
+    dma --> frontend["Frontend\nScale / bias / filter"]
+    frontend --> ring["Timestamped accel + gyro rings\nDrop oldest on overflow"]
+    ring --> pair["Pop oldest gyro\nReject nonmonotonic timestamps; derive dt"]
+    pair --> accel["Latest accel timestamp ≤ gyro\nUse correction only within age limit"]
+    accel --> mahony["Mahony 6-DoF update"]
+    mahony --> loop["Main loop\nQueue-based budget; lag catch-up"]
+    loop --> controller["fc_core_step\nSafety gates → control"]
+    classDef default fill:#ffffff,stroke:#2474b7,color:#152c46;

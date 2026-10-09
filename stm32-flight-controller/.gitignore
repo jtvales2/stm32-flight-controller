@@ -1,0 +1,26 @@
+# Keil user/session configuration
+*.uvoptx
+*.uvopt
+*.uvguix.*
+*.uvgui.*
+
+# Existing target output and local debug configuration
+/firmware/stm32/MDK-ARM/fly1.0/
+/firmware/stm32/MDK-ARM/DebugConfig/
+
+# Compiler, linker and assembler products
+*.o
+*.obj
+*.crf
+*.d
+*.dep
+*.axf
+*.hex
+*.map
+*.lst
+*.lnp
+*.sbr
+*.pbi
+
+# Keep .uvprojx, .ioc, .mxproject, startup assembly and MDK-ARM/RTE.
+# Custom .sct files, documentation HTML and verification logs are not ignored.

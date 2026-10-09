@@ -1,0 +1,4 @@
+PASS: actual sbus.c parser/read paths, PRIMASK 0/1, frame boundary race
+PASS: exact fc_core_baro_feed valid/invalid paths, PRIMASK 0/1, retained state
+PASS: source check confirms baro payload/stale_pending precede valid-last publication.
+LIMIT: host mocks do not verify target CMSIS assembly, full Keil build, latency, or hardware.

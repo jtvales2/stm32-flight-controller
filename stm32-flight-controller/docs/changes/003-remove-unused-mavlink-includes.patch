@@ -1,0 +1,11 @@
+--- a/firmware/stm32/MDK-ARM/fly1.0.uvprojx
++++ b/firmware/stm32/MDK-ARM/fly1.0.uvprojx
+@@ -336,7 +336,7 @@
+               <MiscControls>--c99 --no_strict --gnu</MiscControls>
+               <Define>USE_HAL_DRIVER,STM32F407xx</Define>
+               <Undefine></Undefine>
+-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../mavlink2;../mavlink2/common;../mavlink2/minimal;../mavlink2/standard;../FlightController/fc_core;../FlightController/fc_input;../FlightController/fc_estimator;../FlightController/fc_safety;../FlightController/fc_log;../FlightController/fc_cfg;../FlightController/fc_control;../FlightController/fc_output</IncludePath>
++              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../FlightController/fc_core;../FlightController/fc_input;../FlightController/fc_estimator;../FlightController/fc_safety;../FlightController/fc_log;../FlightController/fc_cfg;../FlightController/fc_control;../FlightController/fc_output</IncludePath>
+             </VariousControls>
+           </Cads>
+           <Aads>

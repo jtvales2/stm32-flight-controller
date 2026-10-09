@@ -1,0 +1,16 @@
+flowchart LR
+    imu["BMI088 accel / gyro\nDRDY + SPI1 DMA"] --> acquire["pipeline.c\nDMA arbitration"]
+    acquire --> rings["ringbuf_spsc.c\nTimestamped vector rings"]
+    rings --> pair["sync_pair.c\nCausal pairing + gyro-derived dt"]
+    pair --> mahony["fusion_mahony.c\n6-DoF quaternion attitude"]
+    pair --> core["fc_core.c\nGyro-driven controller integration"]
+    mahony --> core
+    sbus["SBUS / USART6 circular DMA\nsbus.c → fc_rc.c"] --> core
+    baro["MS5611 scheduled conversions\nms5611.c → fc_baro.c"] --> core
+    core --> control["fc_control.c\nAngle / rate / yaw + throttle / altitude hold"]
+    control --> mixer["fc_mixer_out.c\nMixer + output limits"]
+    mixer --> motors["motors.c\nTIM3 PWM × 4"]
+    watchdog["TIM2 1 kHz watchdog\nfc_time.c / fc_core.c"] -.-> stop["fc_fs.c\nLatched stop / control reset"]
+    core -.-> stop
+    stop -.-> motors
+    classDef default fill:#ffffff,stroke:#2474b7,color:#152c46;

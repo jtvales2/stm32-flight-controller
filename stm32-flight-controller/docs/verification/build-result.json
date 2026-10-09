@@ -1,0 +1,53 @@
+{
+  "date_local": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "target": "fly1.0",
+  "mcu": "STM32F407ZGTx",
+  "keil": "uVision 5.24a",
+  "compiler": "ARM Compiler 5.06 update 5 (build 528)",
+  "device_pack": "Keil.STM32F4xx_DFP.2.17.0",
+  "action": "full rebuild (-r)",
+  "exit_code": 1,
+  "errors": 0,
+  "warnings": 4,
+  "elapsed_seconds_reported": 14,
+  "sizes_bytes": {
+    "code": 55436,
+    "ro_data": 8180,
+    "rw_data": 448,
+    "zi_data": 9688
+  },
+  "generated_and_observed": [
+    "firmware/stm32/MDK-ARM/fly1.0/fly1.0",
+    "firmware/stm32/MDK-ARM/fly1.0/fly1.hex"
+  ],
+  "generated_outputs_removed_after_verification": true,
+  "warnings_detail": [
+    {
+      "file": "Core/Src/main.c",
+      "line": 344,
+      "function": "vofa_send_att_csv",
+      "reason": "unused function, existing source unchanged"
+    },
+    {
+      "file": "FlightController/fc_core/fc_core.c",
+      "line": 127,
+      "function": "fc_motor_tool_write_all",
+      "reason": "unused helper with tool modes disabled"
+    },
+    {
+      "file": "FlightController/fc_core/fc_core.c",
+      "line": 134,
+      "function": "fc_motor_tool_write_one",
+      "reason": "unused helper with tool modes disabled"
+    },
+    {
+      "file": "FlightController/fc_core/fc_core.c",
+      "line": 150,
+      "function": "fc_motor_tool_combo",
+      "reason": "unused helper with tool modes disabled"
+    }
+  ],
+  "log": "docs/verification/keil-rebuild.log",
+  "scope": "Target compilation/linking/HEX generation; no on-target, hardware or flight validation."
+}

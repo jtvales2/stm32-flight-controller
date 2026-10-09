@@ -1,0 +1,26 @@
+{
+  "date_local": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "target": "fly1.0",
+  "compiler": "ARM Compiler 5.06 update 5 (build 528)",
+  "keil": "uVision 5.24a",
+  "device_pack": "Keil.STM32F4xx_DFP.2.17.0",
+  "action": "full rebuild",
+  "exit_code": 1,
+  "errors": 0,
+  "warnings": 4,
+  "elapsed_seconds_reported": 14,
+  "sizes_bytes": {
+    "code": 55448,
+    "ro_data": 8184,
+    "rw_data": 448,
+    "zi_data": 9688
+  },
+  "generated_and_observed_sha256": {
+    "firmware/stm32/MDK-ARM/fly1.0/fly1.0": "9f92485ab6955f23536aa65c030fb10f7302b26cd9b24fb83e8ca2338e887489",
+    "firmware/stm32/MDK-ARM/fly1.0/fly1.hex": "a647ca18155bd1d3b906192266c9a8adb3d882b64df8dd2fed5ce37f9e8538fb"
+  },
+  "generated_outputs_removed_after_verification": true,
+  "log": "docs/verification/phase2-keil-rebuild.log",
+  "scope": "Target compilation/linking only; target runtime and hardware remain pending."
+}

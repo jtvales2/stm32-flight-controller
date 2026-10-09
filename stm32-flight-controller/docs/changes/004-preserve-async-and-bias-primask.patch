@@ -1,0 +1,37 @@
+--- a/firmware/stm32/FlightController/fc_core/fc_core.c
++++ b/firmware/stm32/FlightController/fc_core/fc_core.c
+@@ -358,10 +358,11 @@
+     uint8_t baro_stale;
+     uint8_t alt_was_active;
+ 
++    uint32_t primask = __get_PRIMASK();
+     __disable_irq();
+     baro_stale = s.baro.stale_pending;
+     s.baro.stale_pending = 0u;
+-    __enable_irq();
++    __set_PRIMASK(primask);
+ 
+     if (!baro_stale) {
+         return;
+--- a/firmware/stm32/Core/Src/imu_bringup.c
++++ b/firmware/stm32/Core/Src/imu_bringup.c
+@@ -6,6 +6,7 @@
+ #include "spi.h"
+ #include "gpio.h"
+ #include "imu_bringup.h"
++#include "stm32f4xx.h"
+ #include "log_uart.h"   // 新增
+ 
+ #ifndef IMU_BRINGUP_LOG_EN
+@@ -124,9 +125,10 @@
+     };
+     float gyr_b[3] = { b_dps[0], b_dps[1], b_dps[2] };
+ 
++    uint32_t primask = __get_PRIMASK();
+     __disable_irq();
+     IMU_BMI088_FE_SetBias(s_fe, acc_b, gyr_b);
+-    __enable_irq();
++    __set_PRIMASK(primask);
+ 
+     return 0;
+ }
