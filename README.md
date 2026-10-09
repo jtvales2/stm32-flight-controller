@@ -80,12 +80,12 @@
 
 这些是我当年保存的原始截图，因此这里不凭截图编造 PID 参数、超调百分比或不同测试之间的定量改进结论。后续我会按照真实素材补充机体照片、台架视频和飞行片段。
 
-## 源码构建与项目状态
+## 源码与编译
 
-这份仓库保留了可供研究的 STM32 源码、Keil 工程、CubeMX 配置与必要的 HAL/CMSIS 依赖。使用 [fly1.0.uvprojx](firmware/stm32/MDK-ARM/fly1.0.uvprojx) 构建，详细步骤见 [BUILD.md](BUILD.md)。
+固件源码位于 [`firmware/stm32/`](firmware/stm32/)。使用 **Keil µVision 5 + Arm Compiler 5**，打开 [`fly1.0.uvprojx`](firmware/stm32/MDK-ARM/fly1.0.uvprojx)，选择 `fly1.0`，执行 **Rebuild all target files**。历史本地构建记录为 **0 Errors / 4 Warnings**。
 
-我此前保存的 Keil 重建记录为 **0 Errors / 4 Warnings**，完成了链接与 HEX 生成；本次仓库精简后没有独立重新执行目标板构建。部分中断保护路径做过基于模拟原语的主机测试，但这不等于目标板上全部时序与故障路径已经验证。**本仓库用于展示源码与开发过程，不作为可直接投入飞行的安全固件发布。**
+该仓库主要用于源码交流与工程作品展示。当前整理版本尚未重新完成全套硬件和飞行安全验证；任何实机调试前请先拆除桨叶。
 
-源码中将 `FC_MOTOR_TEST_ENABLE` 与 `FC_ESC_CAL_ENABLE` 默认设为 `0`。进行任何电机或台架检查前，请拆除全部桨叶。
+## 第三方依赖
 
-**代码归属：** `ms5611.c/h` 和 `fusion_mahony.c/h` 的具体实现由我编写；Mahony 算法理论及传感器协议不由我声明原创。ST、Arm CMSIS、Bosch 的第三方代码遵循其原有声明。目前仓库尚未指定覆盖其余自有代码的根目录开源许可证，因而公开可见不代表全部代码已获自由使用授权。详情见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+我主要负责飞控应用层、数据处理、估计和控制逻辑的开发与集成。STM32 HAL/CMSIS、Bosch BMI088 Sensor API 等基础组件采用相应厂商提供的代码，保留其原有版权及许可证。详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
